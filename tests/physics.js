@@ -51,6 +51,8 @@ fs.writeFileSync(root + '/.shots/test.html', '<!doctype html><html><head><meta c
   await t('shaft one level', `reach(2*16, 61*16-14, {dj:true}, null, r => r.ty === 56)`);
   await t('shaft top -> surface', `(()=>{ for (let y=0;y<MH;y++) for (let x=0;x<MW;x++) if (grid[y][x]==='G') grid[y][x]='.'; return reach(2*16, 17*16-14, {dj:true}, 'right', r => r.ty <= 12 && r.tx >= 6); })()`);
   await t('arena -> shaft (G open)', `reach(9*16, 63*16-14, {dj:true}, 'left', r => r.tx <= 5)`);
+  const fl = await p.evaluate(() => { resetGrid(); const r = sim(66*16, 30*16-14, {dj:true, charge:true}, f => f < 50 ? ['down','fire'] : [], 120); return { ok: r.ty > 30 && tileAt(66,30) === '.', r, row30: grid[30].slice(63,70).join('') }; });
+  console.log((fl.ok ? 'PASS ' : 'FAIL ') + 'charged down-shot breaks crystal floor and you fall through', JSON.stringify(fl));
   console.log('ERRORS', errs.length ? errs : 'none');
   await b.close();
 })();

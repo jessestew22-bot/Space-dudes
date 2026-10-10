@@ -17,9 +17,9 @@
 html, body { height: 100%; margin: 0; background: var(--void); color: var(--ink); overflow: hidden; overscroll-behavior: none; }
 body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; -webkit-tap-highlight-color: transparent; font-family: var(--crt); }
 #app { position: fixed; top: env(safe-area-inset-top, 0px); bottom: env(safe-area-inset-bottom, 0px); left: env(safe-area-inset-left, 0px); right: env(safe-area-inset-right, 0px); display: flex; flex-direction: column; align-items: center; background: radial-gradient(ellipse at 50% 0%, #1a0b33 0%, var(--void) 70%); }
-#stage { position: relative; flex: none; overflow: hidden; background: #000; box-shadow: 0 0 0 1px #2a1d4d, 0 0 40px rgba(255, 79, 216, .18); }
+#stage { position: relative; flex: none; overflow: hidden; background-color: #04020c; background-image: radial-gradient(1px 1px at 23px 31px, rgba(255,240,255,.7), transparent), radial-gradient(1px 1px at 91px 118px, rgba(255,240,255,.5), transparent), radial-gradient(1.5px 1.5px at 140px 64px, rgba(255,200,240,.8), transparent), radial-gradient(1px 1px at 57px 150px, rgba(200,240,255,.6), transparent), radial-gradient(ellipse at 50% 30%, rgba(255,79,163,.12), transparent 70%); background-size: 170px 170px, 170px 170px, 170px 170px, 170px 170px, 100% 100%; box-shadow: 0 0 0 1px #2a1d4d, 0 0 40px rgba(255, 79, 216, .18); }
 .landscape #stage { margin: auto 0; }
-#screen { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+#screen { position: absolute; left: 0; top: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
 #stage::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,.55) 100%); z-index: 5; }
 
 /* HUD */
@@ -108,8 +108,8 @@ h2 { font-family: var(--display); font-weight: normal; margin: 0; font-size: cla
 /* controls */
 #controls { width: 100%; z-index: 10; transition: opacity .3s; }
 #controls.dim { opacity: .0; pointer-events: none; }
-.portrait #controls { flex: 1; position: relative; display: flex; align-items: center; justify-content: space-between; padding: 8px 22px 14px; box-sizing: border-box; background: linear-gradient(180deg, #120a26, #0a0618); border-top: 2px solid #2a1d4d; }
-.portrait #controls::before { content: 'SPACE DUDES'; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-family: var(--display); font-size: 14px; color: #3a2a66; letter-spacing: 3px; }
+.portrait #controls { flex: none; position: relative; display: flex; align-items: center; justify-content: space-between; padding: 22px 22px 10px; box-sizing: border-box; background: linear-gradient(180deg, #120a26, #0a0618); border-top: 2px solid #2a1d4d; }
+.portrait #controls::before { content: 'SPACE DUDES'; position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-family: var(--display); font-size: 14px; color: #3a2a66; letter-spacing: 3px; }
 .landscape #controls { position: absolute; inset: 0; pointer-events: none; }
 #pad { position: relative; width: 136px; height: 136px; border-radius: 50%; background: radial-gradient(circle, #2a1d4d 0 30%, #1a1233 31% 100%); border: 2px solid #3a2a66; box-shadow: inset 0 0 20px rgba(0,0,0,.7), 0 4px 0 #000; pointer-events: auto; touch-action: none; }
 #pad::before, #pad::after { content: ''; position: absolute; background: #0d0820; border-radius: 6px; }

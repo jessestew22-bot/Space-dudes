@@ -1,5 +1,6 @@
 // ---------- WORLD: map parse, zones, tile prerender, backgrounds ----------
-const TS = 16, VW = 320, VH = 180;
+const TS = 16;
+let VW = 320, VH = 180; // view size in game pixels; portrait play uses a taller, narrower view
 const MW = MAP_ROWS[0].length, MH = MAP_ROWS.length;
 let grid = [];
 const spawns = [], items = [], npcs = {};
@@ -256,16 +257,16 @@ function drawPlanetBG(c, x, y, r, t) {
   c.strokeStyle = 'rgba(255,170,220,.3)'; c.lineWidth = 1; c.beginPath(); c.ellipse(x, y, r * 2.1, r * 0.42, -0.3, Math.PI * 0.05, Math.PI * 0.95, true); c.stroke();
 }
 function drawBG(c, zone, camX, camY, t) {
-  const L = BG[zone];
-  c.drawImage(L.sky, 0, 0);
+  const L = BG[zone], ys = VH / 180, LW = 640 * ys;
+  c.drawImage(L.sky, 0, 0, VW, VH);
   if (zone === 'surface') {
-    STARS.forEach(s => { const a = 0.35 + 0.65 * Math.abs(Math.sin(t * (0.5 + s.s) + s.p)); c.fillStyle = `rgba(255,240,255,${a * (1 - s.y / 140)})`; c.fillRect(((s.x - camX * 0.02) % 320 + 320) % 320, s.y * 0.7, s.s > 0.9 ? 2 : 1, 1); });
-    drawPlanetBG(c, 250 - camX * 0.03, 52, 26, t);
-    c.fillStyle = '#ffe9f5'; c.beginPath(); c.arc(70 - camX * 0.04, 34, 5, 0, 7); c.fill();
-    c.fillStyle = '#b9a7ff'; c.beginPath(); c.arc(104 - camX * 0.045, 22, 3, 0, 7); c.fill();
+    STARS.forEach(s => { const a = 0.35 + 0.65 * Math.abs(Math.sin(t * (0.5 + s.s) + s.p)); c.fillStyle = `rgba(255,240,255,${a * (1 - s.y / 140)})`; c.fillRect(((s.x - camX * 0.02) % VW + VW) % VW, s.y * 0.7 * ys, s.s > 0.9 ? 2 : 1, 1); });
+    drawPlanetBG(c, VW * 0.78 - camX * 0.03, 52 * ys, 26, t);
+    c.fillStyle = '#ffe9f5'; c.beginPath(); c.arc(VW * 0.22 - camX * 0.04, 34 * ys, 5, 0, 7); c.fill();
+    c.fillStyle = '#b9a7ff'; c.beginPath(); c.arc(VW * 0.33 - camX * 0.045, 22 * ys, 3, 0, 7); c.fill();
   }
-  const fy = Math.max(-30, Math.min(30, -camY * 0.04));
-  const ox1 = -(((camX * 0.15) % 640) + 640) % 640, ox2 = -(((camX * 0.35) % 640) + 640) % 640;
-  c.drawImage(L.far, ox1, fy); c.drawImage(L.far, ox1 + 640, fy);
-  c.drawImage(L.near, ox2, fy * 1.8); c.drawImage(L.near, ox2 + 640, fy * 1.8);
+  const fy = Math.max(-30, Math.min(30, -camY * 0.04)) * ys;
+  const ox1 = -(((camX * 0.15) % LW) + LW) % LW, ox2 = -(((camX * 0.35) % LW) + LW) % LW;
+  c.drawImage(L.far, ox1, fy, LW, VH); c.drawImage(L.far, ox1 + LW, fy, LW, VH);
+  c.drawImage(L.near, ox2, fy * 1.8, LW, VH); c.drawImage(L.near, ox2 + LW, fy * 1.8, LW, VH);
 }

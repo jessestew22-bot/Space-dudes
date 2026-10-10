@@ -1,8 +1,19 @@
 // ---------- GAME ----------
 const cv = document.getElementById('screen'); cv.width = VW; cv.height = VH;
 const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+let wantView = { w: 320, h: 180 }, stageBox = { w: 320, h: 180 };
 const lightCv = document.createElement('canvas'); lightCv.width = VW; lightCv.height = VH;
 const lctx = lightCv.getContext('2d');
+// resize the game view; the canvas is CSS-fitted (contain) inside the stage
+function setView(w, h) {
+  if (VW !== w || VH !== h) {
+    VW = w; VH = h; cv.width = w; cv.height = h; lightCv.width = w; lightCv.height = h;
+    ctx.imageSmoothingEnabled = false;
+  }
+  const k = Math.min(stageBox.w / w, stageBox.h / h), cw = Math.round(w * k), ch = Math.round(h * k);
+  const st = cv.style, l = Math.round((stageBox.w - cw) / 2) + 'px', t = Math.round((stageBox.h - ch) / 2) + 'px';
+  if (st.width !== cw + 'px' || st.left !== l || st.top !== t) { st.width = cw + 'px'; st.height = ch + 'px'; st.left = l; st.top = t; }
+}
 const $ = id => document.getElementById(id);
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -87,13 +98,18 @@ function layout() {
   const W = app.clientWidth, H = app.clientHeight;
   const portrait = H > W * 1.05;
   app.classList.toggle('portrait', portrait); app.classList.toggle('landscape', !portrait);
-  let sw, sh;
-  if (portrait) { sw = W; sh = Math.round(W * 9 / 16); if (sh > H * 0.55) { sh = Math.round(H * 0.55); sw = Math.round(sh * 16 / 9); } }
-  else { sh = H; sw = Math.round(H * 16 / 9); if (sw > W) { sw = W; sh = Math.round(W * 9 / 16); } }
+  let sw, sh, ctlH = 0;
+  if (portrait) { // screen fills everything above a compact control deck
+    ctlH = 196; sw = W; sh = Math.max(Math.round(W * 9 / 16), H - ctlH);
+    const vw = clamp(Math.round(sw / 1.8), 200, 320), k = sw / vw, vh = clamp(Math.round(sh / k), 180, 360);
+    sh = Math.round(vh * k); ctlH = H - sh; wantView = { w: vw, h: vh };
+  } else { sh = H; sw = Math.round(H * 16 / 9); if (sw > W) { sw = W; sh = Math.round(W * 9 / 16); } wantView = { w: 320, h: 180 }; }
+  stageBox = { w: sw, h: sh };
   stage.style.width = sw + 'px'; stage.style.height = sh + 'px';
   stage.style.setProperty('--u', (sw / 320).toFixed(3));
   app.style.setProperty('--u', (sw / 320).toFixed(3)); app.style.setProperty('--sw', sw + 'px'); app.style.setProperty('--sh', sh + 'px');
-  ctl.style.height = portrait ? Math.max(170, H - sh) + 'px' : '';
+  ctl.style.height = portrait ? ctlH + 'px' : '';
+  setView(VW, VH);
 }
 
 // ---------------- bodies & collision
@@ -186,10 +202,10 @@ function damageEnemy(e, dmg) {
 }
 
 // ---------------- shots
-function fire(big) {
-  const dir = P.aim === 'up' ? [0, -1] : P.aim === 'down' ? [0, 1] : [P.face, 0];
-  const gx = P.aim === 'side' ? (P.face > 0 ? P.x + 14 : P.x - 4) : P.x + (P.face > 0 ? 9 : 1);
-  const gy = P.aim === 'up' ? P.y - 2 : P.aim === 'down' ? P.y + 17 : P.y + 9;
+function fire(big, aim = P.aim) {
+  const dir = aim === 'up' ? [0, -1] : aim === 'down' ? [0, 1] : [P.face, 0];
+  const gx = aim === 'side' ? (P.face > 0 ? P.x + 14 : P.x - 4) : P.x + (P.face > 0 ? 9 : 1);
+  const gy = aim === 'up' ? P.y - 2 : aim === 'down' ? P.y + 17 : P.y + 9;
   const sp = big ? 4.2 : 4.6;
   shots.push({ x: gx, y: gy, vx: dir[0] * sp, vy: dir[1] * sp, r: big ? 5 : 2, life: big ? 55 : 34, big, dmg: big ? 4 : 1, col: big ? '255,122,240' : '255,79,216' });
   if (big) { Snd.sfx.big(); shake = Math.max(shake, 3); puff(gx, gy, 10, '255,180,250', { ang: Math.atan2(dir[1], dir[0]), spread: 0.6, max: 3 }); }
@@ -203,7 +219,7 @@ function updateShots() {
     if (isSolid(ch)) {
       s.life = 0;
       if (!s.hostile && ch === 'x') breakTile(tx, ty, '255,200,120');
-      else if (!s.hostile && ch === 'X') { if (s.big) breakTile(tx, ty, '255,122,240'); else { Snd.sfx.hit(); if (!G.ab.charge) toast('Crystal won\'t crack. Need more power.'); } }
+      else if (!s.hostile && ch === 'X') { if (s.big) { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (tileAt(tx + dx, ty + dy) === 'X') breakTile(tx + dx, ty + dy, '255,122,240'); } else { Snd.sfx.hit(); if (!G.ab.charge) toast('Crystal won\'t crack. Need more power.'); } }
       else if (!s.hostile && ch === 'D') { Snd.sfx.hit(); gateHint(); }
       puff(s.x - s.vx, s.y - s.vy, 5, s.col, { max: 1.5 });
       continue;
@@ -270,15 +286,15 @@ function updatePlayer() {
   moveBody(p);
   if (p.onGround && wasAir && p.vy === 0) puff(p.x + 5, p.y + 14, 3, '200,200,255', { ang: -Math.PI / 2, spread: 1.4, max: 0.8 });
   if (p.y > MH * TS) die();
-  p.aim = input.up ? 'up' : (!p.onGround && input.down ? 'down' : 'side');
+  p.aim = input.up ? 'up' : (input.down && (!p.onGround || !(input.left || input.right)) ? 'down' : 'side');
   // weapon
   if (p.fireCd > 0) p.fireCd--;
   if (pressed('fire')) { fire(false); p.fireCd = 11; p.charge = 0; }
   else if (input.fire) {
-    if (G.ab.charge) { p.charge++; if (p.charge === 38) Snd.sfx.charge(); if (p.charge > 20 && frame % 3 === 0) { const a = rand(0, 7); parts.push({ x: p.x + 5 + Math.cos(a) * 14, y: p.y + 8 + Math.sin(a) * 14, vx: -Math.cos(a) * 0.9, vy: -Math.sin(a) * 0.9, life: 14, max: 14, col: '255,122,240', size: 1, add: true }); } }
+    if (G.ab.charge) { p.charge++; p.chargeAim = p.aim; if (p.charge === 38) Snd.sfx.charge(); if (p.charge > 20 && frame % 3 === 0) { const a = rand(0, 7); parts.push({ x: p.x + 5 + Math.cos(a) * 14, y: p.y + 8 + Math.sin(a) * 14, vx: -Math.cos(a) * 0.9, vy: -Math.sin(a) * 0.9, life: 14, max: 14, col: '255,122,240', size: 1, add: true }); } }
     else if (p.fireCd <= 0) { fire(false); p.fireCd = 11; }
   }
-  if (released('fire')) { if (G.ab.charge && p.charge >= 38) fire(true); p.charge = 0; }
+  if (released('fire')) { if (G.ab.charge && p.charge >= 38) fire(true, p.chargeAim || p.aim); p.charge = 0; }
   // anim
   if (p.onGround && Math.abs(p.vx) > 0.3) { p.anim += Math.abs(p.vx) * 0.12; p.frame = Math.floor(p.anim) % 4; } else p.frame = 0;
   if (p.inv > 0) p.inv--;
@@ -321,6 +337,10 @@ function checkTriggers() {
   // the cliff without boots
   if (!G.ab.dj && !G.seen.cliff && px > 49 * TS && px < 52 * TS && py > 9 * TS && py < 13 * TS) {
     G.seen.cliff = true; say([['P', G.who === 'ian' ? 'Wall. Tall. Cool.' : 'My AI says I can make that jump.'], ['P', G.who === 'ian' ? 'Somebody jumpy would be useful right now.' : '...My AI is wrong. Somebody jumpy would help.']]);
+  }
+  // standing on crystal: teach the down-blast
+  if (G.ab.charge && !G.seen.downHint && P.onGround && tileAt(Math.floor(px / TS), Math.floor((P.y + P.h + 1) / TS)) === 'X') {
+    G.seen.downHint = true; toast('Hold DOWN + FIRE, let go to blast the floor');
   }
   // rescues
   for (const k of ['richie', 'eli', 'bigt']) {
@@ -555,7 +575,7 @@ function updateCam() {
   if (shake > 0) shake *= 0.88;
   if (frame % 8 === 0) {
     const x0 = Math.floor(cam.x / TS), y0 = Math.floor(cam.y / TS);
-    for (let y = y0; y <= y0 + 12; y++) for (let x = x0; x <= x0 + 20; x++) if (x < MW && y < MH) explored[y * MW + x] = 1;
+    for (let y = y0; y <= y0 + Math.ceil(VH / TS); y++) for (let x = x0; x <= x0 + Math.ceil(VW / TS); x++) if (x < MW && y < MH) explored[y * MW + x] = 1;
   }
 }
 
@@ -584,6 +604,8 @@ function update() {
 
 // ---------------- render world
 function render() {
+  const cine = state === 'ending' || scene === 'orbit' || state === 'title' || state === 'select' || state === 'boot' || state === 'credits';
+  if (cine) setView(320, 180); else setView(wantView.w, wantView.h);
   if (state === 'ending') { renderEnding(); return; }
   if (scene === 'orbit' || state === 'title' || state === 'select' || state === 'boot' || (state === 'credits')) { renderOrbit(); return; }
   if (!P) return;
@@ -596,7 +618,7 @@ function render() {
   lights = [];
   // dynamic tiles: gates, seals, crystal shimmer
   const tx0 = Math.floor(sx / TS), ty0 = Math.floor(sy / TS);
-  for (let ty = ty0; ty <= ty0 + 12; ty++) for (let tx = tx0; tx <= tx0 + 21; tx++) {
+  for (let ty = ty0; ty <= ty0 + Math.ceil(VH / TS); ty++) for (let tx = tx0; tx <= tx0 + Math.ceil(VW / TS); tx++) {
     const ch = tileAt(tx, ty), x = tx * TS - sx, y = ty * TS - sy;
     if (ch === 'D') {
       const pul = 0.5 + 0.5 * Math.sin(T * 3 + ty);
@@ -665,7 +687,7 @@ function render() {
     lights.push({ x, y, r: s.big ? 46 : 22, col: s.col, i: 0.9 });
   }
   // acid overlay
-  for (let ty = ty0; ty <= ty0 + 12; ty++) for (let tx = tx0; tx <= tx0 + 21; tx++) {
+  for (let ty = ty0; ty <= ty0 + Math.ceil(VH / TS); ty++) for (let tx = tx0; tx <= tx0 + Math.ceil(VW / TS); tx++) {
     if (tileAt(tx, ty) !== '~') continue;
     const x = tx * TS - sx, y = ty * TS - sy, surf = tileAt(tx, ty - 1) !== '~';
     ctx.fillStyle = 'rgba(120,230,40,.42)'; ctx.fillRect(x, y, TS, TS);
