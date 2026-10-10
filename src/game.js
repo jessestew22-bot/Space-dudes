@@ -318,16 +318,13 @@ function collect(it) {
   if (it.type === 'F') {
     G.fuel[it.id] = true; save();
     const n = Object.keys(G.fuel).length;
-    banner(`FUEL CELL ${n}/3`, n < 3 ? 'The ship needs three to make orbit.' : 'Tank\'s full. Now finish rounding up the crew.');
+    banner(...SCRIPT.fuel(n, ['richie', 'eli', 'bigt'].every(k => G.crew[k]), G.other));
   } else if (it.type === 'H') {
     G.tanks[it.id] = true; G.maxEnergy += 50; P.energy = G.maxEnergy; save();
     banner('ENERGY TANK', 'Max energy +50. Fully recharged.');
   } else {
     G.tape = true; save();
-    const lines = G.who === 'ian'
-      ? [['ian', 'No.'], ['ian', 'No no no. SPORTS PAGES VOL. 46. FANTASTIC HOCKEY FIGHTS.'], ['ian', 'I left this on EARTH. In a DRAWER. Under a FLOOR.'], ['narr', 'A sticky note on the case: "Light-years aren\'t far enough. -J"'], ['ian', '...He\'s good. I hate that he\'s good.']]
-      : [['jesse', 'Is that...'], ['jesse', 'SPORTS PAGES VOL. 46. FANTASTIC HOCKEY FIGHTS. On an alien planet.'], ['narr', 'A sticky note on the case: "Thought this was far enough. -I"'], ['jesse', 'My AI says the odds of this were zero percent.'], ['jesse', 'My AI has never met Ian.']];
-    say(lines, () => banner('SECRET: THE TAPE', 'It\'s riding home with you. Whether anyone likes it or not.'));
+    say(SCRIPT.tape(G.who), () => banner(...SCRIPT.tapeGift));
   }
 }
 
@@ -336,7 +333,7 @@ function checkTriggers() {
   const px = P.x + 5, py = P.y + 7;
   // the cliff without boots
   if (!G.ab.dj && !G.seen.cliff && px > 49 * TS && px < 52 * TS && py > 9 * TS && py < 13 * TS) {
-    G.seen.cliff = true; say([['P', G.who === 'ian' ? 'Wall. Tall. Cool.' : 'My AI says I can make that jump.'], ['P', G.who === 'ian' ? 'Somebody jumpy would be useful right now.' : '...My AI is wrong. Somebody jumpy would help.']]);
+    G.seen.cliff = true; say(SCRIPT.cliff(G.who));
   }
   // standing on crystal: teach the down-blast
   if (G.ab.charge && !G.seen.downHint && P.onGround && tileAt(Math.floor(px / TS), Math.floor((P.y + P.h + 1) / TS)) === 'X') {
@@ -363,21 +360,17 @@ function gateHint() {
   if (G.gateOpen || state !== 'play') return;
   const crew = ['richie', 'eli', 'bigt'].filter(k => G.crew[k]).length, fuel = Object.keys(G.fuel).length;
   if (crew === 3 && fuel === 3) { openGate(); return; }
+  if (!G.seen.gateFirst) { G.seen.gateFirst = true; G.seen.gateNag = frame; say(SCRIPT.gateFirst(G.who, G.other)); return; }
   if (G.seen.gateNag && frame - G.seen.gateNag < 300) return;
   G.seen.gateNag = frame;
-  toast(`HIVE GATE · crew ${crew}/3 · fuel ${fuel}/3`);
+  toast(`SEALED · crew ${crew}/3 · fuel ${fuel}/3`);
 }
 function openGate() {
   G.gateOpen = true; G.checkpoint = { x: 10 * TS + 2, y: 43 * TS }; save();
   const O = G.other;
-  say([
-    ['eli', 'Oh great. It\'s the door brothers.'],
-    ['bigt', 'That door is BREATHING. Doors don\'t BREATHE.'],
-    ['radio:' + O, O === 'ian' ? '...Is that you guys? Took you long enough. There\'s a big one in here.' : 'GUYS! My AI says you\'re right outside! ...It also says I\'m a sandwich. Hurry.'],
-    ['richie', 'Everybody stay calm. I\'m calm. Who touched me? Nobody? Okay.'],
-  ], () => {
+  say(SCRIPT.gateOpen(G.who, O), () => {
     for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (grid[y][x] === 'D') { grid[y][x] = '.'; puff(x * TS + 8, y * TS + 8, 10, '255,61,110', { max: 2.5 }); }
-    redrawAround(13, 46); Snd.sfx.door(); shake = 10; toast('Point of no return. Crew\'s with you.');
+    redrawAround(13, 46); Snd.sfx.door(); shake = 10; toast('No turning back now.');
   });
 }
 function applyWorldFlags() {
@@ -390,46 +383,16 @@ function rescue(k) {
   G.crew[k] = true; G.order.push(k);
   const n = npcs[k]; G.checkpoint = { x: n.x - 5, y: n.y - 14 };
   save(); Snd.sfx.item(); puff(n.x, n.y - 8, 30, '255,255,255', { max: 2.5 });
-  if (k === 'richie') {
-    say([
-      ['richie', 'AAAH! DUDE! Don\'t SNEAK up on me!', 'yell'],
-      ...(W === 'jesse' ? [['jesse', 'RICH, LOOK OUT!'], ['richie', '...There\'s nothing there, dude.'], ['jesse', 'Saved your life. Again.']]
-        : [['ian', 'You\'re glued to a wall with alien snot, Rich.'], ['richie', 'It\'s GOO, dude. Snot is a whole different thing.'], ['ian', 'Enlighten me later.']]),
-      ['richie', 'They grabbed me and I jumped SO hard I jumped twice. In the AIR.'],
-      ['richie', 'Pretty sure it\'s the boots. Take \'em. I\'m done jumping for today.'],
-      ['richie', 'And FYI, rescues are free. I don\'t owe you five bucks for this, dude.', 'smirk'],
-    ], () => { G.ab.dj = true; save(); banner('JUMPY BOOTS', 'Press JUMP again in mid-air to double jump. Rich says they\'re a loan.'); });
-  } else if (k === 'eli') {
-    say([
-      ['eli', 'Oh great. It\'s the rescue-party brothers. Party of one.'],
-      ['eli', 'Took you long enough. I\'ve been holding off space bugs with a SWORD.'],
-      ...(W === 'jesse' ? [['jesse', 'My AI says swords are 80 percent of space combat.'], ['eli', 'Your AI is right. Don\'t tell it I said that.']]
-        : [['ian', 'Why did you bring a sword to space.'], ['eli', 'Why DIDN\'T you.']]),
-      ['eli', 'Here. ANIME DRAW. Hold the trigger. Feel it. Let go.'],
-      ['eli', 'That\'s the whole lesson. Purple crystals break if you mean it.'],
-    ], () => { G.ab.charge = true; save(); banner('ANIME DRAW', 'Hold FIRE to charge, release to blast. Charged shots shatter purple crystal.'); });
-  } else {
-    say([
-      ['bigt', 'BROWN TOWN, BABY! YOU FOUND ME!', 'yell'],
-      ['bigt', 'Island life. Acid on all sides. Honestly? Thriving.'],
-      ['bigt', 'I\'ve been brewing remedies. Drink this. It\'s from the bathroom cabinet.'],
-      ...(W === 'ian' ? [['ian', '...The label says "not for internal use."'], ['bigt', 'I SAID DON\'T READ THE LABEL!', 'yell']]
-        : [['jesse', 'My AI says that\'s forty percent cough syrup.'], ['bigt', 'And SIXTY percent COURAGE.', 'yell']]),
-      ['bigt', 'Acid can\'t touch you now. Neither can I. Personal space.'],
-    ], () => { G.ab.suit = true; P.energy = G.maxEnergy; save(); banner('BATHROOM CABINET', 'Acid won\'t hurt you anymore. Energy refilled. Don\'t ask what was in it.'); });
-  }
+  if (k === 'richie') say(SCRIPT.richie(W), () => { G.ab.dj = true; save(); banner(...SCRIPT.richieGift); });
+  else if (k === 'eli') say(SCRIPT.eli(W), () => { G.ab.charge = true; save(); banner(...SCRIPT.eliGift); });
+  else say(SCRIPT.bigt(W), () => { G.ab.suit = true; P.energy = G.maxEnergy; save(); banner(...SCRIPT.bigtGift); });
 }
 
 // ---------------- boss
 function startBoss() {
   boss = { x: bossSpawn.x - 28, y: 55 * TS, w: 56, h: 48, hp: 70, max: 70, t: 0, cd: 140, spawnCd: 260, flash: 0, mode: 'float', modeT: 0, blink: false, dying: 0 };
   Snd.music('boss');
-  say([
-    ['narr', 'Something enormous unfolds from the ceiling.'],
-    ['richie', 'DUDE. DUDE. IT\'S HUGE.', 'yell'],
-    ['bigt', 'She\'s ugly AND she took our guy. That\'s two strikes.'],
-    ['eli', 'Oh great. It\'s the queen brothers.'],
-  ], () => { $('bossbar').hidden = false; areaCard('HIVE QUEEN GLORBAX'); });
+  say(SCRIPT.boss(G.who, G.other), () => { $('bossbar').hidden = false; areaCard('HIVE QUEEN GLORBAX'); });
 }
 function updateBoss() {
   const b = boss; if (!b) return;
@@ -474,25 +437,8 @@ function updateBoss() {
 function bossDie() { if (boss.dying) return; boss.dying = 1; enemies.forEach(e => { if (e.boss) { e.dead = true; puff(e.x, e.y, 10, '43,212,196'); } }); shots = shots.filter(s => !s.hostile); Snd.stop(); }
 function afterBoss() {
   G.bossDead = true; G.crew.other = true; G.order.push('other'); save();
-  const O = G.other;
   puff(capturedPos.x, capturedPos.y - 10, 40, '255,61,110', { max: 3 });
-  say(O === 'ian' ? [
-    ['ian', '...Took you long enough.'],
-    ['ian', 'I had a whole speech ready. Forgot it. Hanging upside down does that.'],
-    ['jesse', 'My AI predicted you\'d be a horse by now.'],
-    ['ian', 'Your AI needs a nap.'],
-  ] : [
-    ['jesse', 'IAN! I KNEW you\'d come! My AI predicted it!'],
-    ['ian', 'Your AI predicted launch was Thursday.'],
-    ['jesse', '...It IS Thursday now. Checkmate.'],
-  ], () => {
-    say([
-      ['narr', 'The whole hive shudders. Deep below, something goes critical.'],
-      ['bigt', 'Why is the FLOOR making THAT noise?!', 'yell'],
-      ['eli', 'Oh great. It\'s the exploding-planet brothers.'],
-      ['richie', 'The wall! The wall broke! There\'s a shaft! GO GO GO, DUDE!', 'yell'],
-    ], startEscape);
-  });
+  say(SCRIPT.freed(G.who), () => say(SCRIPT.critical, startEscape));
 }
 function startEscape() {
   G.escape = true; G.escapeT = (G.easy ? 150 : 110) * 60;
@@ -501,7 +447,7 @@ function startEscape() {
   enemies.forEach(e => e.dead = true);
   Snd.music('escape'); Snd.sfx.boom(); shake = 14;
   $('timer').hidden = false;
-  banner('GET TO THE SHIP', 'The planet is coming apart. Up the shaft, left of the arena. Move!');
+  banner(...SCRIPT.escape);
 }
 function updateEscape() {
   if (!G.escape) return;
@@ -802,16 +748,7 @@ function startEnding() {
   G.flags.finished = true;
   $('controls').classList.add('dim');
   const O = G.other;
-  ENDCAPS = [
-    [210, 'bigt', 'TURN IT UP!!'],
-    [380, 'richie', 'Dude. Whose playlist is this?'],
-    [560, 'jesse', 'My AI made it. "Songs for Leaving Exploding Planets, Vol. 1."'],
-    [780, 'ian', '...It\'s good. I hate that it\'s good.'],
-    [960, 'eli', 'Oh great. It\'s the road-trip brothers.'],
-    [1130, 'richie', 'Shotgun, by the way. I called it back on the planet.'],
-    [1300, 'bigt', 'BAD BOYS FOR LIFE! ...IN SPACE!'],
-  ];
-  if (G.tape) ENDCAPS.push([1500, 'narr', 'Under the seat: SPORTS PAGES VOL. 46. Nobody admits to anything.']);
+  ENDCAPS = SCRIPT.ending(G.who, G.tape);
 }
 let ENDCAPS = [];
 function renderEnding() {

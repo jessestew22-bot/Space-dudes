@@ -108,23 +108,7 @@ function resetGrid() { grid = cleanGrid.map(r => r.slice()); }
 function startNewGame(who) {
   G = freshG(who); save();
   scene = 'orbit'; G.introDrop = true; state = 'story'; showScreen(null);
-  const O = G.other;
-  const lines = [
-    ['narr', 'Orbit of KELSO-7. The salvage ship STARSTANG 5.0.'],
-    ['narr', '0600. The dropship launched with a crew of four. It was supposed to be five.'],
-    ...(who === 'jesse'
-      ? [['jesse', 'My AI said launch was Thursday.'], ['jesse', 'It\'s Tuesday. My AI remains VERY confident it\'s Thursday.']]
-      : [['ian', 'I was busy.'], ['ian', '...Returning something. Don\'t ask.'], ['narr', 'He was sneaking a VHS tape into J\'s bunk. It took forty minutes.']]),
-    ['radio:richie', 'DUDE. DUDE! Something grabbed the dropship! We\'re going DOWN!', 'yell'],
-    ['radio:eli', 'Oh great. It\'s the crash-landing brothers.'],
-    ['radio:bigt', 'BROWN TOWN IS GOING DOWN TOWN!!', 'yell'],
-    O === 'ian' ? ['radio:ian', '...We got split up. Something big took me. Bring snacks. Or don\'t. I\'ll be here.']
-      : ['radio:jesse', 'MAYDAY! We\'re split up! My AI says everything is fine! MY AI IS ON FIRE!', 'yell'],
-    ['narr', 'Signal lost.'],
-    ...(who === 'jesse'
-      ? [['jesse', 'Okay. Solo rescue. My AI gives me 73.6 percent.'], ['jesse', '...It rounded up.']]
-      : [['ian', 'Great. Love that for me.'], ['ian', 'Find the crew. Find fuel. Go home.']]),
-  ];
+  const lines = SCRIPT.intro(who, G.other);
   say(lines, () => { scene = null; G.introDrop = false; beginPlay(true); });
 }
 function beginPlay(fresh) {
@@ -136,8 +120,7 @@ function beginPlay(fresh) {
   state = 'play'; snapCam(); Snd.music('explore');
   if (G.bossDead) { P = newPlayer(20 * TS, 61 * TS); snapCam(); startEscape(); return; }
   if (fresh) {
-    const O = CREW[G.other].name;
-    banner('MISSION', `Rescue RICH, E, BIG T and ${O}. Grab 3 FUEL CELLS. Everybody back to the ship.`);
+    banner(...SCRIPT.mission(G.who, G.other));
   }
 }
 function showCredits() {

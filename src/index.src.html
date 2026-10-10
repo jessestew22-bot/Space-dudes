@@ -54,8 +54,8 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 
 /* dialog + banner (live over the whole app so phones get big type) */
 #dialog { position: absolute; z-index: 20; display: flex; gap: 12px; align-items: flex-start; background: var(--panel); border: 2px solid var(--edge); border-radius: 4px; padding: 10px 12px; box-shadow: 0 0 0 2px #000, 0 10px 30px rgba(0,0,0,.6); }
-.landscape #dialog { bottom: 10px; left: 50%; transform: translateX(-50%); width: min(calc(var(--sw) - 24px), 760px); }
-.portrait #dialog { left: 10px; right: 10px; top: calc(var(--sh) + 10px); }
+.landscape #dialog { top: calc(var(--u) * 27px); left: 50%; transform: translateX(-50%); width: min(calc(var(--sw) - 24px), 720px); box-sizing: border-box; }
+.portrait #dialog { left: 10px; right: 10px; top: auto; bottom: calc(100% - var(--sh) + 10px); }
 #dport { width: clamp(56px, calc(var(--u) * 30px), 96px); height: auto; aspect-ratio: 1; image-rendering: pixelated; border: 2px solid var(--cyan); flex: none; background: #140d26; }
 #dialog.narr #dport { display: none; }
 #dialog.radio #dport { border-color: var(--lime); }
@@ -65,13 +65,15 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 #dtext { font-size: clamp(20px, calc(var(--u) * 9px), 30px); line-height: 1.05; min-height: 2.1em; }
 #dialog.narr #dtext { color: #d9c9ff; font-style: italic; }
 #dnext { position: absolute; right: 10px; bottom: 6px; color: var(--neon); font-family: var(--pixel); font-size: 10px; animation: blink .7s steps(2) infinite; }
-#banner { position: absolute; z-index: 21; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(88vw, 520px); text-align: center; background: var(--panel); border: 2px solid var(--neon); padding: 18px 18px 14px; box-shadow: 0 0 40px rgba(255,79,216,.45), 0 0 0 2px #000; }
-.portrait #banner { top: calc(var(--sh) * 0.5 + 40px); }
+#banner { position: absolute; z-index: 21; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(86vw, 460px); box-sizing: border-box; text-align: center; background: var(--panel); border: 2px solid var(--neon); padding: 18px 18px 14px; box-shadow: 0 0 40px rgba(255,79,216,.45), 0 0 0 2px #000; }
+.portrait #banner { top: calc(var(--sh) * 0.5); }
+.landscape #banner { top: calc(var(--u) * 27px); transform: translateX(-50%); padding: 12px 16px 10px; }
+.landscape #bdesc { font-size: 20px; margin: 4px 0 6px; }
 #btitle { font-family: var(--display); font-size: clamp(22px, 6vw, 36px); background: linear-gradient(180deg, #fff 0%, #ffd6f7 45%, #ff4fd8 55%, #7a2bff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 #000); }
 #bdesc { font-size: 22px; margin: 8px 0 10px; line-height: 1.05; }
 .tap { font-family: var(--pixel); font-size: 9px; color: var(--dim); animation: blink 1s steps(2) infinite; }
 #caption { position: absolute; z-index: 22; left: 50%; transform: translate(-50%, 10px); bottom: 14px; opacity: 0; transition: .3s; background: rgba(5,3,13,.85); border: 1px solid var(--edge); padding: 8px 14px; font-size: clamp(20px, 2.6vw, 28px); width: max-content; max-width: min(92vw, 700px); text-align: center; }
-.portrait #caption { top: calc(var(--sh) + 16px); bottom: auto; }
+.portrait #caption { top: auto; bottom: calc(100% - var(--sh) + 12px); }
 .landscape.ending #caption { top: 12px; bottom: auto; }
 #caption.show { opacity: 1; transform: translate(-50%, 0); }
 #caption b { color: var(--cyan); font-family: var(--pixel); font-size: 11px; font-weight: normal; }

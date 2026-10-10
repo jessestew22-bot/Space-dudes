@@ -63,8 +63,8 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 
 /* dialog + banner (live over the whole app so phones get big type) */
 #dialog { position: absolute; z-index: 20; display: flex; gap: 12px; align-items: flex-start; background: var(--panel); border: 2px solid var(--edge); border-radius: 4px; padding: 10px 12px; box-shadow: 0 0 0 2px #000, 0 10px 30px rgba(0,0,0,.6); }
-.landscape #dialog { bottom: 10px; left: 50%; transform: translateX(-50%); width: min(calc(var(--sw) - 24px), 760px); }
-.portrait #dialog { left: 10px; right: 10px; top: calc(var(--sh) + 10px); }
+.landscape #dialog { top: calc(var(--u) * 27px); left: 50%; transform: translateX(-50%); width: min(calc(var(--sw) - 24px), 720px); box-sizing: border-box; }
+.portrait #dialog { left: 10px; right: 10px; top: auto; bottom: calc(100% - var(--sh) + 10px); }
 #dport { width: clamp(56px, calc(var(--u) * 30px), 96px); height: auto; aspect-ratio: 1; image-rendering: pixelated; border: 2px solid var(--cyan); flex: none; background: #140d26; }
 #dialog.narr #dport { display: none; }
 #dialog.radio #dport { border-color: var(--lime); }
@@ -74,13 +74,15 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 #dtext { font-size: clamp(20px, calc(var(--u) * 9px), 30px); line-height: 1.05; min-height: 2.1em; }
 #dialog.narr #dtext { color: #d9c9ff; font-style: italic; }
 #dnext { position: absolute; right: 10px; bottom: 6px; color: var(--neon); font-family: var(--pixel); font-size: 10px; animation: blink .7s steps(2) infinite; }
-#banner { position: absolute; z-index: 21; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(88vw, 520px); text-align: center; background: var(--panel); border: 2px solid var(--neon); padding: 18px 18px 14px; box-shadow: 0 0 40px rgba(255,79,216,.45), 0 0 0 2px #000; }
-.portrait #banner { top: calc(var(--sh) * 0.5 + 40px); }
+#banner { position: absolute; z-index: 21; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(86vw, 460px); box-sizing: border-box; text-align: center; background: var(--panel); border: 2px solid var(--neon); padding: 18px 18px 14px; box-shadow: 0 0 40px rgba(255,79,216,.45), 0 0 0 2px #000; }
+.portrait #banner { top: calc(var(--sh) * 0.5); }
+.landscape #banner { top: calc(var(--u) * 27px); transform: translateX(-50%); padding: 12px 16px 10px; }
+.landscape #bdesc { font-size: 20px; margin: 4px 0 6px; }
 #btitle { font-family: var(--display); font-size: clamp(22px, 6vw, 36px); background: linear-gradient(180deg, #fff 0%, #ffd6f7 45%, #ff4fd8 55%, #7a2bff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 #000); }
 #bdesc { font-size: 22px; margin: 8px 0 10px; line-height: 1.05; }
 .tap { font-family: var(--pixel); font-size: 9px; color: var(--dim); animation: blink 1s steps(2) infinite; }
 #caption { position: absolute; z-index: 22; left: 50%; transform: translate(-50%, 10px); bottom: 14px; opacity: 0; transition: .3s; background: rgba(5,3,13,.85); border: 1px solid var(--edge); padding: 8px 14px; font-size: clamp(20px, 2.6vw, 28px); width: max-content; max-width: min(92vw, 700px); text-align: center; }
-.portrait #caption { top: calc(var(--sh) + 16px); bottom: auto; }
+.portrait #caption { top: auto; bottom: calc(100% - var(--sh) + 12px); }
 .landscape.ending #caption { top: 12px; bottom: auto; }
 #caption.show { opacity: 1; transform: translate(-50%, 0); }
 #caption b { color: var(--cyan); font-family: var(--pixel); font-size: 11px; font-weight: normal; }
@@ -905,6 +907,162 @@ function drawBG(c, zone, camX, camY, t) {
   c.drawImage(L.near, ox2, fy * 1.8, LW, VH); c.drawImage(L.near, ox2 + LW, fy * 1.8, LW, VH);
 }
 
+// ---------- SCRIPT: every story line in one place ----------
+// Lines are [speaker, text, mood?]. Speakers: crew ids, 'P' (player), 'O' (the captured one),
+// 'narr', or 'radio:<speaker>'. W = who you play ('jesse' | 'ian').
+//
+// Story spine (keep every scene consistent with it):
+// - Four of the five went down in the dropship. The player missed the launch (J: his AI booked it
+//   for Thursday; Ian: busy sneaking the hockey tape into J's bunk).
+// - Something grabbed the dropship; it crashed, the crew split up, and the dropship's 3 fuel cells
+//   scattered. The player lands the STARSTANG after them, and that landing burns its fuel.
+// - Rescues: Rich (stuck in goo, gives his boots), E (fighting bugs, tunes your blaster),
+//   Big T (on an acid island, shares his remedy). The other main guy is held in the hive.
+// - The crew only goes into the hive once: whole crew, full tank. Then the queen, then the
+//   planet goes critical and everyone climbs the shaft to the ship.
+const pick = (W, j, i) => (W === 'jesse' ? j : i);
+
+const SCRIPT = {
+  intro: (W, O) => [
+    ['narr', 'Orbit of KELSO-7. The salvage ship STARSTANG 5.0.'],
+    ['narr', '0600. The dropship heads down to the surface with four of the crew. There are five on the roster.'],
+    ...pick(W,
+      [['jesse', 'My AI put the launch on my calendar for Thursday.'], ['jesse', 'It\'s Tuesday. My AI says the crew left early. Rude.']],
+      [['ian', 'I was busy.'], ['ian', '...Returning something. Don\'t ask.'], ['narr', 'He was sneaking a VHS tape into J\'s bunk. It took forty minutes.']]),
+    ['narr', '0614. The radio crackles.'],
+    ['radio:richie', 'DUDE. DUDE! Something just GRABBED the dropship! We\'re going DOWN!', 'yell'],
+    ['radio:bigt', 'BROWN TOWN IS GOING DOWN TOWN!!', 'yell'],
+    ['narr', 'Static. Nothing for two hours. Then one more message.'],
+    ...pick(W,
+      [['radio:ian', '...It\'s Ian. We crashed. Everybody got split up. Something big dragged me underground.'],
+       ['radio:ian', 'The dropship\'s fuel cells blew all over the place. You\'ll want those. Bring snacks.']],
+      [['radio:jesse', 'It\'s J! We crashed, everybody split up, and something HUGE dragged me underground!', 'yell'],
+       ['radio:jesse', 'The fuel cells are scattered everywhere. My AI says I\'m fine. My AI is not down here.']]),
+    ['narr', 'Signal lost.'],
+    ...pick(W,
+      [['jesse', 'Okay. Solo rescue. My AI gives me 73.6 percent.'], ['jesse', '...It rounded up.']],
+      [['ian', 'Great. Love that for me.']]),
+    ['narr', 'You take the STARSTANG down after them. The landing burns most of the fuel.'],
+  ],
+  mission: (W, O) => ['MISSION', `Find RICH, E and BIG T. Find the dropship's 3 FUEL CELLS so the STARSTANG can make orbit. Then go get ${CREW[O].name}.`],
+
+  cliff: W => pick(W,
+    [['jesse', 'My AI says I can make that jump.'], ['jesse', '...My AI has been wrong before. I need more jump.']],
+    [['ian', 'Wall. Tall. Cool.'], ['ian', 'I\'m gonna need more jump than I\'ve got.']]),
+
+  richie: W => [
+    ['richie', 'AAAH! DUDE! Don\'t SNEAK up on me!', 'yell'],
+    ...pick(W,
+      [['jesse', 'RICH, LOOK OUT!'], ['richie', '...There\'s nothing there, dude.'], ['jesse', 'Because I just saved your life. Again.']],
+      [['ian', 'You\'re glued to a wall with alien snot, Rich.'], ['richie', 'It\'s GOO, dude. Totally different.'], ['ian', 'Sure.']]),
+    ['narr', 'You peel Rich out of the goo.'],
+    ['richie', 'When that thing grabbed me I jumped SO hard I jumped twice. In midair.'],
+    ['richie', 'Turns out these space boots do that. Here. You take \'em. I\'m done jumping for today.'],
+    ['P', 'What are you gonna wear?'],
+    ['richie', 'Space socks, dude.'],
+    ['richie', 'And FYI, rescues are free. I don\'t owe you five bucks for this.', 'smirk'],
+  ],
+  richieGift: ['JUMPY BOOTS', 'Press JUMP again in midair to double jump. Rich wants them back. Eventually.'],
+
+  eli: W => [
+    ['eli', 'Oh great. It\'s the rescue-party brothers. Party of one.'],
+    ['eli', 'About time. I\'ve been holding off space bugs with a sword for two hours.'],
+    ...pick(W,
+      [['jesse', 'My AI says swords are 80 percent of space combat.'], ['eli', 'Your AI is right. Don\'t tell it I said that.']],
+      [['ian', 'Why did you bring a sword to space?'], ['eli', 'Why DIDN\'T you?']]),
+    ['eli', 'Hand me your blaster.'],
+    ['narr', 'E taps it twice with the flat of his sword. It starts to hum.'],
+    ['eli', 'ANIME DRAW. Hold the trigger. Feel it. Let go.'],
+    ['eli', 'That\'s the whole lesson. Purple crystal breaks if you mean it.'],
+  ],
+  eliGift: ['ANIME DRAW', 'Hold FIRE to charge, let go to blast. Charged shots shatter purple crystal. Hold DOWN while charging to blast the floor.'],
+
+  bigt: W => [
+    ['bigt', 'BROWN TOWN, BABY! You found me!', 'yell'],
+    ['P', pick(W, 'Big T! How\'d you even get out here?', 'You\'re on an island. In acid.')],
+    ['bigt', 'Walked. Through the acid. I\'ve been drinking my own remedy all day.'],
+    ['bigt', 'Packed it from my bathroom cabinet before we launched. Here. Your turn.'],
+    ...pick(W,
+      [['jesse', 'My AI says that\'s forty percent cough syrup.'], ['bigt', 'And SIXTY percent COURAGE!', 'yell']],
+      [['ian', '...The label says "not for internal use."'], ['bigt', 'I SAID DON\'T READ THE LABEL!', 'yell']]),
+    ['P', 'So why didn\'t you just walk out?'],
+    ['bigt', 'I was WAITING for you. It\'s called LOYALTY.'],
+  ],
+  bigtGift: ['BATHROOM CABINET', 'Acid can\'t hurt you now. Energy refilled. Don\'t ask what was in it.'],
+
+  fuel: (n, crewDone, O) => [`FUEL CELL ${n}/3`,
+    n < 3 ? 'The STARSTANG needs three to make orbit.'
+      : crewDone ? `Tank's full and the crew's together. Time to go get ${CREW[O].name}.` : 'Tank\'s full. Now round up the rest of the crew.'],
+
+  tape: W => pick(W, [
+    ['jesse', 'Is that...'],
+    ['jesse', 'SPORTS PAGES VOL. 46. FANTASTIC HOCKEY FIGHTS.'],
+    ['narr', 'A sticky note on the case: "Thought this was far enough. -I"'],
+    ['jesse', 'Ian brought this on the dropship. Just to hide it from me. On a different PLANET.'],
+    ['jesse', '...I\'m keeping it. Out of spite.'],
+  ], [
+    ['ian', 'No.'],
+    ['ian', 'SPORTS PAGES VOL. 46. I put this in J\'s bunk this MORNING.'],
+    ['narr', 'A sticky note on the case: "Nice try. -J"'],
+    ['ian', 'He took it on the dropship. To an alien planet. To give it BACK.'],
+    ['ian', '...Respect. Still not keeping it.'],
+  ]),
+  tapeGift: ['SECRET: THE TAPE', 'It\'s riding home with you. Whether anyone likes it or not.'],
+
+  gateFirst: (W, O) => [
+    ['P', pick(W, 'Ian\'s in there. Gotta be.', 'J\'s in there. I can hear him narrating.')],
+    ['P', 'We only go in once: whole crew, full tank, then straight back out.'],
+  ],
+  gateOpen: (W, O) => [
+    ['bigt', 'That door is BREATHING. Doors don\'t BREATHE.'],
+    ...pick(W,
+      [['radio:ian', '...Guys. I can hear you through the door. Open the door.']],
+      [['radio:jesse', 'GUYS! I can hear you! My AI says the door is friendly!'], ['eli', 'It\'s not friendly.']]),
+    ['richie', 'Okay. Everybody shoot it on three. One, two...'],
+    ['richie', 'AAH!', 'yell'],
+    ['narr', 'Rich fires early. Then everybody does. The door gives up.'],
+  ],
+
+  boss: (W, O) => [
+    ['narr', 'Something enormous unfolds from the ceiling.'],
+    [O, pick(W, 'Over here. In the goo. Again.', 'HI GUYS! Over here! In the goo!')],
+    ['richie', 'DUDE. DUDE. IT\'S HUGE.', 'yell'],
+    ['bigt', 'She\'s ugly AND she took our guy. That\'s two strikes.'],
+    ['eli', 'Hold the trigger. Mean it.'],
+  ],
+  freed: W => pick(W, [
+    ['ian', '...Took you long enough.'],
+    ['jesse', 'I had a scheduling conflict.'],
+    ['ian', 'With the MISSION.'],
+    ['jesse', 'My AI is very sorry. ...It says it isn\'t.'],
+  ], [
+    ['jesse', 'IAN! I knew you\'d come! My AI predicted it!'],
+    ['ian', 'Your AI had the launch on Thursday.'],
+    ['jesse', 'And it\'s Tuesday, and you came anyway. Checkmate.'],
+    ['ian', 'That\'s not what checkmate means.'],
+  ]),
+  critical: [
+    ['narr', 'The queen hits the floor. The whole hive shudders. Deep below, something goes critical.'],
+    ['bigt', 'Why is the FLOOR making THAT noise?!', 'yell'],
+    ['eli', 'We killed the queen and now the planet\'s mad about it.'],
+    ['richie', 'The wall broke! There\'s a shaft! UP UP UP, DUDE!', 'yell'],
+  ],
+  escape: ['GET TO THE SHIP', 'The planet is coming apart. Climb the shaft on the left side of the arena. It comes out right next to the ship.'],
+
+  ending: (W, tape) => [
+    [210, 'bigt', 'TURN IT UP!!'],
+    [380, 'richie', 'Dude. Whose playlist is this?'],
+    [560, 'jesse', 'My AI made it. "Songs for Leaving Exploding Planets, Vol. 1."'],
+    [780, 'ian', '...It\'s good. I hate that it\'s good.'],
+    [960, 'eli', 'Oh great. It\'s the road-trip brothers.'],
+    [1130, 'richie', 'Called shotgun on the planet, by the way. It counts.'],
+    [1300, 'bigt', 'BAD BOYS FOR LIFE! ...IN SPACE!'],
+    ...(tape ? [[1500, 'narr', pick(W,
+      'J slides SPORTS PAGES VOL. 46 into Ian\'s bag. Ian doesn\'t notice. Yet.',
+      'Ian slides SPORTS PAGES VOL. 46 under J\'s seat. J doesn\'t notice. Yet.')]] : []),
+  ],
+};
+
 // ---------- GAME ----------
 const cv = document.getElementById('screen'); cv.width = VW; cv.height = VH;
 const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
@@ -1225,16 +1383,13 @@ function collect(it) {
   if (it.type === 'F') {
     G.fuel[it.id] = true; save();
     const n = Object.keys(G.fuel).length;
-    banner(`FUEL CELL ${n}/3`, n < 3 ? 'The ship needs three to make orbit.' : 'Tank\'s full. Now finish rounding up the crew.');
+    banner(...SCRIPT.fuel(n, ['richie', 'eli', 'bigt'].every(k => G.crew[k]), G.other));
   } else if (it.type === 'H') {
     G.tanks[it.id] = true; G.maxEnergy += 50; P.energy = G.maxEnergy; save();
     banner('ENERGY TANK', 'Max energy +50. Fully recharged.');
   } else {
     G.tape = true; save();
-    const lines = G.who === 'ian'
-      ? [['ian', 'No.'], ['ian', 'No no no. SPORTS PAGES VOL. 46. FANTASTIC HOCKEY FIGHTS.'], ['ian', 'I left this on EARTH. In a DRAWER. Under a FLOOR.'], ['narr', 'A sticky note on the case: "Light-years aren\'t far enough. -J"'], ['ian', '...He\'s good. I hate that he\'s good.']]
-      : [['jesse', 'Is that...'], ['jesse', 'SPORTS PAGES VOL. 46. FANTASTIC HOCKEY FIGHTS. On an alien planet.'], ['narr', 'A sticky note on the case: "Thought this was far enough. -I"'], ['jesse', 'My AI says the odds of this were zero percent.'], ['jesse', 'My AI has never met Ian.']];
-    say(lines, () => banner('SECRET: THE TAPE', 'It\'s riding home with you. Whether anyone likes it or not.'));
+    say(SCRIPT.tape(G.who), () => banner(...SCRIPT.tapeGift));
   }
 }
 
@@ -1243,7 +1398,7 @@ function checkTriggers() {
   const px = P.x + 5, py = P.y + 7;
   // the cliff without boots
   if (!G.ab.dj && !G.seen.cliff && px > 49 * TS && px < 52 * TS && py > 9 * TS && py < 13 * TS) {
-    G.seen.cliff = true; say([['P', G.who === 'ian' ? 'Wall. Tall. Cool.' : 'My AI says I can make that jump.'], ['P', G.who === 'ian' ? 'Somebody jumpy would be useful right now.' : '...My AI is wrong. Somebody jumpy would help.']]);
+    G.seen.cliff = true; say(SCRIPT.cliff(G.who));
   }
   // standing on crystal: teach the down-blast
   if (G.ab.charge && !G.seen.downHint && P.onGround && tileAt(Math.floor(px / TS), Math.floor((P.y + P.h + 1) / TS)) === 'X') {
@@ -1270,21 +1425,17 @@ function gateHint() {
   if (G.gateOpen || state !== 'play') return;
   const crew = ['richie', 'eli', 'bigt'].filter(k => G.crew[k]).length, fuel = Object.keys(G.fuel).length;
   if (crew === 3 && fuel === 3) { openGate(); return; }
+  if (!G.seen.gateFirst) { G.seen.gateFirst = true; G.seen.gateNag = frame; say(SCRIPT.gateFirst(G.who, G.other)); return; }
   if (G.seen.gateNag && frame - G.seen.gateNag < 300) return;
   G.seen.gateNag = frame;
-  toast(`HIVE GATE · crew ${crew}/3 · fuel ${fuel}/3`);
+  toast(`SEALED · crew ${crew}/3 · fuel ${fuel}/3`);
 }
 function openGate() {
   G.gateOpen = true; G.checkpoint = { x: 10 * TS + 2, y: 43 * TS }; save();
   const O = G.other;
-  say([
-    ['eli', 'Oh great. It\'s the door brothers.'],
-    ['bigt', 'That door is BREATHING. Doors don\'t BREATHE.'],
-    ['radio:' + O, O === 'ian' ? '...Is that you guys? Took you long enough. There\'s a big one in here.' : 'GUYS! My AI says you\'re right outside! ...It also says I\'m a sandwich. Hurry.'],
-    ['richie', 'Everybody stay calm. I\'m calm. Who touched me? Nobody? Okay.'],
-  ], () => {
+  say(SCRIPT.gateOpen(G.who, O), () => {
     for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (grid[y][x] === 'D') { grid[y][x] = '.'; puff(x * TS + 8, y * TS + 8, 10, '255,61,110', { max: 2.5 }); }
-    redrawAround(13, 46); Snd.sfx.door(); shake = 10; toast('Point of no return. Crew\'s with you.');
+    redrawAround(13, 46); Snd.sfx.door(); shake = 10; toast('No turning back now.');
   });
 }
 function applyWorldFlags() {
@@ -1297,46 +1448,16 @@ function rescue(k) {
   G.crew[k] = true; G.order.push(k);
   const n = npcs[k]; G.checkpoint = { x: n.x - 5, y: n.y - 14 };
   save(); Snd.sfx.item(); puff(n.x, n.y - 8, 30, '255,255,255', { max: 2.5 });
-  if (k === 'richie') {
-    say([
-      ['richie', 'AAAH! DUDE! Don\'t SNEAK up on me!', 'yell'],
-      ...(W === 'jesse' ? [['jesse', 'RICH, LOOK OUT!'], ['richie', '...There\'s nothing there, dude.'], ['jesse', 'Saved your life. Again.']]
-        : [['ian', 'You\'re glued to a wall with alien snot, Rich.'], ['richie', 'It\'s GOO, dude. Snot is a whole different thing.'], ['ian', 'Enlighten me later.']]),
-      ['richie', 'They grabbed me and I jumped SO hard I jumped twice. In the AIR.'],
-      ['richie', 'Pretty sure it\'s the boots. Take \'em. I\'m done jumping for today.'],
-      ['richie', 'And FYI, rescues are free. I don\'t owe you five bucks for this, dude.', 'smirk'],
-    ], () => { G.ab.dj = true; save(); banner('JUMPY BOOTS', 'Press JUMP again in mid-air to double jump. Rich says they\'re a loan.'); });
-  } else if (k === 'eli') {
-    say([
-      ['eli', 'Oh great. It\'s the rescue-party brothers. Party of one.'],
-      ['eli', 'Took you long enough. I\'ve been holding off space bugs with a SWORD.'],
-      ...(W === 'jesse' ? [['jesse', 'My AI says swords are 80 percent of space combat.'], ['eli', 'Your AI is right. Don\'t tell it I said that.']]
-        : [['ian', 'Why did you bring a sword to space.'], ['eli', 'Why DIDN\'T you.']]),
-      ['eli', 'Here. ANIME DRAW. Hold the trigger. Feel it. Let go.'],
-      ['eli', 'That\'s the whole lesson. Purple crystals break if you mean it.'],
-    ], () => { G.ab.charge = true; save(); banner('ANIME DRAW', 'Hold FIRE to charge, release to blast. Charged shots shatter purple crystal.'); });
-  } else {
-    say([
-      ['bigt', 'BROWN TOWN, BABY! YOU FOUND ME!', 'yell'],
-      ['bigt', 'Island life. Acid on all sides. Honestly? Thriving.'],
-      ['bigt', 'I\'ve been brewing remedies. Drink this. It\'s from the bathroom cabinet.'],
-      ...(W === 'ian' ? [['ian', '...The label says "not for internal use."'], ['bigt', 'I SAID DON\'T READ THE LABEL!', 'yell']]
-        : [['jesse', 'My AI says that\'s forty percent cough syrup.'], ['bigt', 'And SIXTY percent COURAGE.', 'yell']]),
-      ['bigt', 'Acid can\'t touch you now. Neither can I. Personal space.'],
-    ], () => { G.ab.suit = true; P.energy = G.maxEnergy; save(); banner('BATHROOM CABINET', 'Acid won\'t hurt you anymore. Energy refilled. Don\'t ask what was in it.'); });
-  }
+  if (k === 'richie') say(SCRIPT.richie(W), () => { G.ab.dj = true; save(); banner(...SCRIPT.richieGift); });
+  else if (k === 'eli') say(SCRIPT.eli(W), () => { G.ab.charge = true; save(); banner(...SCRIPT.eliGift); });
+  else say(SCRIPT.bigt(W), () => { G.ab.suit = true; P.energy = G.maxEnergy; save(); banner(...SCRIPT.bigtGift); });
 }
 
 // ---------------- boss
 function startBoss() {
   boss = { x: bossSpawn.x - 28, y: 55 * TS, w: 56, h: 48, hp: 70, max: 70, t: 0, cd: 140, spawnCd: 260, flash: 0, mode: 'float', modeT: 0, blink: false, dying: 0 };
   Snd.music('boss');
-  say([
-    ['narr', 'Something enormous unfolds from the ceiling.'],
-    ['richie', 'DUDE. DUDE. IT\'S HUGE.', 'yell'],
-    ['bigt', 'She\'s ugly AND she took our guy. That\'s two strikes.'],
-    ['eli', 'Oh great. It\'s the queen brothers.'],
-  ], () => { $('bossbar').hidden = false; areaCard('HIVE QUEEN GLORBAX'); });
+  say(SCRIPT.boss(G.who, G.other), () => { $('bossbar').hidden = false; areaCard('HIVE QUEEN GLORBAX'); });
 }
 function updateBoss() {
   const b = boss; if (!b) return;
@@ -1381,25 +1502,8 @@ function updateBoss() {
 function bossDie() { if (boss.dying) return; boss.dying = 1; enemies.forEach(e => { if (e.boss) { e.dead = true; puff(e.x, e.y, 10, '43,212,196'); } }); shots = shots.filter(s => !s.hostile); Snd.stop(); }
 function afterBoss() {
   G.bossDead = true; G.crew.other = true; G.order.push('other'); save();
-  const O = G.other;
   puff(capturedPos.x, capturedPos.y - 10, 40, '255,61,110', { max: 3 });
-  say(O === 'ian' ? [
-    ['ian', '...Took you long enough.'],
-    ['ian', 'I had a whole speech ready. Forgot it. Hanging upside down does that.'],
-    ['jesse', 'My AI predicted you\'d be a horse by now.'],
-    ['ian', 'Your AI needs a nap.'],
-  ] : [
-    ['jesse', 'IAN! I KNEW you\'d come! My AI predicted it!'],
-    ['ian', 'Your AI predicted launch was Thursday.'],
-    ['jesse', '...It IS Thursday now. Checkmate.'],
-  ], () => {
-    say([
-      ['narr', 'The whole hive shudders. Deep below, something goes critical.'],
-      ['bigt', 'Why is the FLOOR making THAT noise?!', 'yell'],
-      ['eli', 'Oh great. It\'s the exploding-planet brothers.'],
-      ['richie', 'The wall! The wall broke! There\'s a shaft! GO GO GO, DUDE!', 'yell'],
-    ], startEscape);
-  });
+  say(SCRIPT.freed(G.who), () => say(SCRIPT.critical, startEscape));
 }
 function startEscape() {
   G.escape = true; G.escapeT = (G.easy ? 150 : 110) * 60;
@@ -1408,7 +1512,7 @@ function startEscape() {
   enemies.forEach(e => e.dead = true);
   Snd.music('escape'); Snd.sfx.boom(); shake = 14;
   $('timer').hidden = false;
-  banner('GET TO THE SHIP', 'The planet is coming apart. Up the shaft, left of the arena. Move!');
+  banner(...SCRIPT.escape);
 }
 function updateEscape() {
   if (!G.escape) return;
@@ -1709,16 +1813,7 @@ function startEnding() {
   G.flags.finished = true;
   $('controls').classList.add('dim');
   const O = G.other;
-  ENDCAPS = [
-    [210, 'bigt', 'TURN IT UP!!'],
-    [380, 'richie', 'Dude. Whose playlist is this?'],
-    [560, 'jesse', 'My AI made it. "Songs for Leaving Exploding Planets, Vol. 1."'],
-    [780, 'ian', '...It\'s good. I hate that it\'s good.'],
-    [960, 'eli', 'Oh great. It\'s the road-trip brothers.'],
-    [1130, 'richie', 'Shotgun, by the way. I called it back on the planet.'],
-    [1300, 'bigt', 'BAD BOYS FOR LIFE! ...IN SPACE!'],
-  ];
-  if (G.tape) ENDCAPS.push([1500, 'narr', 'Under the seat: SPORTS PAGES VOL. 46. Nobody admits to anything.']);
+  ENDCAPS = SCRIPT.ending(G.who, G.tape);
 }
 let ENDCAPS = [];
 function renderEnding() {
@@ -1908,23 +2003,7 @@ function resetGrid() { grid = cleanGrid.map(r => r.slice()); }
 function startNewGame(who) {
   G = freshG(who); save();
   scene = 'orbit'; G.introDrop = true; state = 'story'; showScreen(null);
-  const O = G.other;
-  const lines = [
-    ['narr', 'Orbit of KELSO-7. The salvage ship STARSTANG 5.0.'],
-    ['narr', '0600. The dropship launched with a crew of four. It was supposed to be five.'],
-    ...(who === 'jesse'
-      ? [['jesse', 'My AI said launch was Thursday.'], ['jesse', 'It\'s Tuesday. My AI remains VERY confident it\'s Thursday.']]
-      : [['ian', 'I was busy.'], ['ian', '...Returning something. Don\'t ask.'], ['narr', 'He was sneaking a VHS tape into J\'s bunk. It took forty minutes.']]),
-    ['radio:richie', 'DUDE. DUDE! Something grabbed the dropship! We\'re going DOWN!', 'yell'],
-    ['radio:eli', 'Oh great. It\'s the crash-landing brothers.'],
-    ['radio:bigt', 'BROWN TOWN IS GOING DOWN TOWN!!', 'yell'],
-    O === 'ian' ? ['radio:ian', '...We got split up. Something big took me. Bring snacks. Or don\'t. I\'ll be here.']
-      : ['radio:jesse', 'MAYDAY! We\'re split up! My AI says everything is fine! MY AI IS ON FIRE!', 'yell'],
-    ['narr', 'Signal lost.'],
-    ...(who === 'jesse'
-      ? [['jesse', 'Okay. Solo rescue. My AI gives me 73.6 percent.'], ['jesse', '...It rounded up.']]
-      : [['ian', 'Great. Love that for me.'], ['ian', 'Find the crew. Find fuel. Go home.']]),
-  ];
+  const lines = SCRIPT.intro(who, G.other);
   say(lines, () => { scene = null; G.introDrop = false; beginPlay(true); });
 }
 function beginPlay(fresh) {
@@ -1936,8 +2015,7 @@ function beginPlay(fresh) {
   state = 'play'; snapCam(); Snd.music('explore');
   if (G.bossDead) { P = newPlayer(20 * TS, 61 * TS); snapCam(); startEscape(); return; }
   if (fresh) {
-    const O = CREW[G.other].name;
-    banner('MISSION', `Rescue RICH, E, BIG T and ${O}. Grab 3 FUEL CELLS. Everybody back to the ship.`);
+    banner(...SCRIPT.mission(G.who, G.other));
   }
 }
 function showCredits() {
